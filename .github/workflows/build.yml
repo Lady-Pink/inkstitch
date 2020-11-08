@@ -43,10 +43,6 @@ jobs:
           python -m pip --version
           python -m pip debug
 
-          # wxPython doen't publish linux wheels in pypi
-          wget -q https://extras.wxpython.org/wxPython4/extras/linux/gtk3/ubuntu-16.04/wxPython-4.0.6-cp27-cp27mu-linux_x86_64.whl
-          python -m pip install wxPython*.whl
-
           python -m pip install PyGObject
 
           python -m pip install -r requirements.txt

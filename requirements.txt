@@ -1,7 +1,7 @@
 ./pyembroidery
 backports.functools_lru_cache
-wxPython==4.0.6
-networkx==2.2
+wxPython
+networkx
 shapely==1.6.3
 lxml
 appdirs
