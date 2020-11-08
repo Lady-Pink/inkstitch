@@ -1,19 +1,16 @@
 import sys
 from copy import deepcopy
 
+import inkex
 import tinycss2
-
-import cubicsuperpath
-from cspsubdiv import cspsubdiv
+from inkex import bezier
 
 from ..commands import find_commands
 from ..i18n import _
-from ..svg import PIXELS_PER_MM, apply_transforms, convert_length, get_doc_size
+from ..svg import PIXELS_PER_MM, apply_transforms, convert_length
 from ..svg.tags import (EMBROIDERABLE_TAGS, INKSCAPE_LABEL, INKSTITCH_ATTRIBS,
-                        SVG_CIRCLE_TAG, SVG_ELLIPSE_TAG, SVG_GROUP_TAG,
-                        SVG_OBJECT_TAGS, SVG_RECT_TAG, SVG_LINK_TAG)
+                        SVG_GROUP_TAG, SVG_LINK_TAG)
 from ..utils import cache
-from .svg_objects import circle_to_path, ellipse_to_path, rect_to_path
 
 
 class Patch:
@@ -155,22 +152,29 @@ class EmbroideryElement(object):
     def parse_style(self, node=None):
         if node is None:
             node = self.node
+        element_style = node.get("style", "")
+        if element_style is None:
+            return None
         declarations = tinycss2.parse_declaration_list(node.get("style", ""))
         style = {declaration.lower_name: declaration.value[0].serialize() for declaration in declarations}
         return style
 
     @cache
     def _get_style_raw(self, style_name):
+        if self.node is None:
+            return None
         if self.node.tag not in [SVG_GROUP_TAG, SVG_LINK_TAG] and self.node.tag not in EMBROIDERABLE_TAGS:
             return None
 
         style = self.parse_style()
-        style = style.get(style_name) or self.node.get(style_name)
+        if style:
+            style = style.get(style_name) or self.node.get(style_name)
         parent = self.node.getparent()
         # style not found, get inherited style elements
         while not style and parent is not None:
             style = self.parse_style(parent)
-            style = style.get(style_name) or parent.get(style_name)
+            if style:
+                style = style.get(style_name) or parent.get(style_name)
             parent = parent.getparent()
         return style
 
@@ -185,27 +189,10 @@ class EmbroideryElement(object):
 
     @property
     @cache
-    def stroke_scale(self):
-        svg = self.node.getroottree().getroot()
-        doc_width, doc_height = get_doc_size(svg)
-        # this is necessary for clones, since they are disconnected from the DOM
-        # it will result in a slighty wrong result for zig-zag stitches
-        if doc_width == 0:
-            return 1
-        viewbox = svg.get('viewBox', '0 0 %s %s' % (doc_width, doc_height))
-        viewbox = viewbox.strip().replace(',', ' ').split()
-        return doc_width / float(viewbox[2])
-
-    @property
-    @cache
     def stroke_width(self):
-        width = self.get_style("stroke-width", None)
-
-        if width is None:
-            return 1.0
-
+        width = self.get_style("stroke-width", "1px")
         width = convert_length(width)
-        return width * self.stroke_scale
+        return width
 
     @property
     @param('ties',
@@ -247,20 +234,16 @@ class EmbroideryElement(object):
         # In a path, each element in the 3-tuple is itself a tuple of (x, y).
         # Tuples all the way down.  Hasn't anyone heard of using classes?
 
-        if self.node.tag in SVG_OBJECT_TAGS:
-            if self.node.tag == SVG_RECT_TAG:
-                d = rect_to_path(self.node)
-            elif self.node.tag == SVG_ELLIPSE_TAG:
-                d = ellipse_to_path(self.node)
-            elif self.node.tag == SVG_CIRCLE_TAG:
-                d = circle_to_path(self.node)
+        # TODO: get_path doesn't work in all cases
+        if getattr(self.node, "get_path", None):
+            d = self.node.get_path()
         else:
             d = self.node.get("d", "")
 
         if not d:
             self.fatal(_("Object %(id)s has an empty 'd' attribute.  Please delete this object from your document.") % dict(id=self.node.get("id")))
 
-        return cubicsuperpath.parsePath(d)
+        return inkex.paths.Path(d).to_superpath()
 
     @cache
     def parse_path(self):
@@ -302,13 +285,13 @@ class EmbroideryElement(object):
         """approximate a path containing beziers with a series of points"""
 
         path = deepcopy(path)
-        cspsubdiv(path, 0.1)
+        bezier.cspsubdiv(path, 0.1)
 
         return [self.strip_control_points(subpath) for subpath in path]
 
     def flatten_subpath(self, subpath):
         path = [deepcopy(subpath)]
-        cspsubdiv(path, 0.1)
+        bezier.cspsubdiv(path, 0.1)
 
         return self.strip_control_points(path[0])
 
@@ -349,7 +332,7 @@ class EmbroideryElement(object):
         # L10N used when showing an error message to the user such as
         # "Some Path (path1234): error: satin column: One or more of the rungs doesn't intersect both rails."
         error_msg = "%s: %s %s" % (name, _("error:"), message)
-        print >> sys.stderr, "%s" % (error_msg.encode("UTF-8"))
+        print(error_msg, file=sys.stderr)
         sys.exit(1)
 
     def validation_errors(self):

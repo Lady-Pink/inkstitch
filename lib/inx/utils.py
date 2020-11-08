@@ -6,7 +6,8 @@ from os.path import dirname
 
 from jinja2 import Environment, FileSystemLoader
 
-from ..i18n import N_, locale_dir, translation as default_translation
+from ..i18n import N_, locale_dir
+from ..i18n import translation as default_translation
 
 _top_path = dirname(dirname(dirname(os.path.realpath(__file__))))
 inx_path = os.path.join(_top_path, "inx")
@@ -50,7 +51,7 @@ def write_inx_file(name, contents):
 
     inx_file_name = "inkstitch_%s.inx" % name
     with open(os.path.join(inx_locale_dir, inx_file_name), 'w') as inx_file:
-        print >> inx_file, contents.encode("utf-8")
+        print(contents, file=inx_file)
 
 
 def iterate_inx_locales():
@@ -64,7 +65,7 @@ def iterate_inx_locales():
         # generate menu items for this language in Inkscape's "Extensions"
         # menu.
         magic_string = N_("Generate INX files")
-        translated_magic_string = translation.ugettext(magic_string)
+        translated_magic_string = translation.gettext(magic_string)
 
         if translated_magic_string != magic_string or locale == "en_US":
             current_translation = translation
