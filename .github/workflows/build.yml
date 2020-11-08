@@ -87,9 +87,8 @@ jobs:
       - name: install dependencies
         shell: bash
         run: |
-          pip install Shapely-1.6.3-cp27-cp27m-win32.whl
           pip install -r requirements.txt
-          pip install pyinstaller==3.3.1
+          pip install pyinstaller
 
           bzcat inkscape-1.0.1.tar.xz | tar -xf -
           rm inkscape-1.0.1.tar.xz
@@ -131,7 +130,7 @@ jobs:
         run: |
           brew update
 
-          brew install gtk+3 pkg-config gobject-introspection libffi gettext || true
+          brew install gtk+3 pkg-config gobject-introspection geos libffi gettext || true
 
           export LDFLAGS="-L/usr/local/opt/libffi/lib"
           export PKG_CONFIG_PATH="/usr/local/opt/libffi/lib/pkgconfig"
@@ -139,7 +138,7 @@ jobs:
           # for msgfmt
           echo "/usr/local/opt/gettext/bin" >> $GITHUB_PATH
 
-          echo "::set-env name=GI_TYPELIB_PATH::/usr/local/lib/girepository-1.0/"
+          echo "GI_TYPELIB_PATH=/usr/local/lib/girepository-1.0/" >> $GITHUB_ENV
 
           pip --version
           pip install PyGObject
@@ -171,15 +170,15 @@ jobs:
         run: |
           if [[ "${GITHUB_REF}" =~ ^refs/tags/v[0-9.]+$ ]]; then
             tag="${GITHUB_REF#refs/tags/}"
-            echo "::set-env name=release_tag::${tag}"
-            echo "::set-env name=prerelease::false"
-            echo "::set-env name=title::${tag}"
+            echo "release_tag=${tag}" >> $GITHUB_ENV
+            echo "prerelease=false" >> $GITHUB_ENV
+            echo "title=${tag}" >> $GITHUB_ENV
           else
             branch="${GITHUB_REF#refs/heads/}"
             tag="dev-build-$(echo $branch | tr / -)"
-            echo "::set-env name=release_tag::${tag}"
-            echo "::set-env name=prerelease::true"
-            echo "::set-env name=title::development build of $branch"
+            echo "release_tag=${tag}" >> $GITHUB_ENV
+            echo "prerelease=true" >> $GITHUB_ENV
+            echo "title=development build of $branch" >> $GITHUB_ENV
           fi
       - name: download linux
         uses: actions/download-artifact@v2
