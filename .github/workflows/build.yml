@@ -27,8 +27,7 @@ jobs:
         shell: bash
         run: |
           sudo apt-get update
-
-          python -m pip install --upgrade pip
+          pip install --upgrade pip
 
           sudo apt-get install gettext
 
@@ -43,13 +42,14 @@ jobs:
 
           uname -a
           python --version
-          python -m pip --version
-          python -m pip debug
+          pip --version
+          pip debug
 
-          python -m pip install PyGObject
+          pip install PyGObject
 
-          python -m pip install -r requirements.txt
-          python -m pip install pyinstaller
+          pip install wheel
+          pip install -r requirements.txt
+          pip install pyinstaller
           
           tar -xf inkscape-1.0.1.tar.xz
           rm inkscape-1.0.1.tar.xz
@@ -87,6 +87,7 @@ jobs:
       - name: install dependencies
         shell: bash
         run: |
+          pip install Shapely‑1.7.1‑cp39‑cp39‑win32.whl
           pip install -r requirements.txt
           pip install pyinstaller
 
@@ -140,8 +141,10 @@ jobs:
 
           echo "GI_TYPELIB_PATH=/usr/local/lib/girepository-1.0/" >> $GITHUB_ENV
 
+          pip install --upgrade pip
           pip --version
           pip install PyGObject
+          pip install wheel
           pip install -r requirements.txt
           pip install pyinstaller==3.3.1
           
